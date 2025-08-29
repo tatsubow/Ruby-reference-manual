@@ -503,3 +503,268 @@ self[range] = val
 #rangeで指定したインデックスの範囲に含まれる部分文字列を文字列valで置き換える。
 #[PARAM]range: 置き換えたい範囲を示すRangeオブジェクト
 #[RETURN]: valを返す。
+
+append_as_bytes(*objects) -> self
+#引数で与えたオブジェクトをバイト列として、selfに破壊的に連結します。このメソッドはエンコーディングの検査や変換をしない。引数が整数である場合は、その数をバイトの値とみなして連結する。その数が1バイトの範囲を超える場合は、最下位のバイトだけを使う。
+s = "あ".b# => "\xE3\x81\x82"
+s.encoding# => #<Encoding:BINARY (ASCII-8BIT)>
+s.append_as_bytes("い")# => "xE3\x81\x82\xE3\x81\x84"
+#s <<"い"では連結できない
+s << "い"
+#引数で整数を渡す
+t = ""
+t.append_as_bytes(0x61)# => "a"
+t.append_as_bytes(0x3062)# => "ab"
+
+
+ascii_only? -> bool
+#文字列がASCII文字のみで構成されている場合にtrueを返す。そうでなければfalseを返す。
+'abc123'.ascii_only?# => true
+''.ascii_only# => true
+'日本語'.ascii_only?# => false
+'日本語abc123'.ascii_only?# => false
+
+
+b -> String
+#selfの文字エンコーディングをASCII-8BITにした文字列の複製を返します。
+'abc123'.encoding# => #<Encoding:UTF-8>
+'abc123'.b.encoding# => #<Encoding:ASCII-8BIT>
+
+
+byteindex(pattern, offset=0) -> Integer | nil
+#文字列のoffsetから右に向かってpatternを検索し、最初に見つかった部分文字列の左端のバイト単位インデックスを返す。見つからなければnilを返す。
+#[PARAM]pattern: 探索する部分文字列または正規表現
+#[PARAM]offset: 探索を開始するバイト単位のオフセット
+#[EXCEPTION]IndexError: オフセットが文字列の境界以外を指しているときに発生します。
+'foo'.byteindex('f')# => 0
+'foo'.byteindex('o')# => 1
+'foo'.byteindex('oo')# => 1
+'foo'.byteindex('ooo')# => nil
+
+'foo'.byteindex(/f/)# => 0
+'foo'.byteindex(/o/)# => 1
+'foo'.byteindex(/oo/)# => 1
+'foo'.byteindex(/ooo/)# => nil
+
+'foo'.byteindex('o', 1)# => 1
+'foo'.byteindex('o', 2)# => 2
+'foo'.byteindex('o', 3)# => nil
+
+'foo'.byteindex('o', -1)# => 2
+'foo'.byteindex('o', -2)# => 1
+'foo'.byteindex('o', -3)# => 1
+'foo'.byteindex('o', -4)# => nil
+
+'あいう'.byteindex('う')# => 6
+'あいう'.byteindex('う', 3)# => 6
+'あいう'.byteindex('う', -3)# => 6
+'あいう'.byteindex('う', 1)# IndexError
+
+
+byterindex(pattern, offset =self,bytesize) -> Integer | nil
+#文字列のバイト単位のインデックスoffsetから左に向かってpatternを探索する。最初に見つかった部分文字列の左端のバイトの単位のインデックスを返す。見つからなければnilを返す。String#byteindexと探索方向が逆。
+#部分文字列の称号はどちらのメソッドも左から右に向かって行う。
+p "stringstring".byteindex("ing", 1)# => 3
+
+p "stringstring".byterindex("ing", -1)# => 9
+#[PARAM]pattern: 探索する部分文字列また正規表現
+[PARAM]offset: 探索を始めるバイト単位のインデックス
+'foo'.byterindex('f')# => 0
+'foo'.byterindex('o')# => 2
+'foo'.byterindex('oo')# => 1
+'foo'.byterindex('ooo')# => nil
+
+'foo'.byterindex(/f/)# => 0
+'foo'.byterindex(/o/)# => 2
+'foo'.byterindex(/oo/)# => 1
+'foo'.byterindex(/ooo/)# => nil
+
+#右でのマッチが優先
+'foo'.byterindex(/o+/)# => 2
+#最長にするには否定戻り読みと組み合わせる
+'foo'.byterindex(/(?<!o)o+/)# => 1
+#またはbyteindexを否定先読み
+'foo'.byteindex(/(?<!o)o+/)# => 1
+
+'foo'.byterindex('o', 0)# => nil
+'foo'.byterindex('o', 1)# => 1
+'foo'.byterindex('o', 2)# => 2
+'foo'.byterindex('o', 3)# => 2
+
+'foo'.byterindex('o', -1)# => 2
+'foo'.byterindex('o', -2)# => 1
+'foo'.byterindex('o', -3)# => nil
+'foo'.byterindex('o', -4)# => nil
+
+
+bytes -> [Integer]
+bytes{|byte|...} -> selfがfreeze
+#文字列の各バイトを数値の配列で返す。
+"str".bytes# => [115, 116, 114]
+#ブロックが指定された場合はString#each_byteと同じように動作する。
+
+
+bytesize -> Integer
+#文字列のバイト長を整数で返す。
+p "いろは".size# => 3
+p "いろは".bytesize# => 9
+
+
+byteslice(nth) -> String | nil
+#nthバイト目の文字を返します。nthが負の場合は文字列の末尾から数える。引数が範囲外を指定した場合はnilを返す。
+#[PARAM]nth: 文字の位置を表す整数を指定する。
+#[RETURN]: 切り出した文字列を返す。戻り値の文字エンコーディングは自身と同じ。
+"hello".byteslice(1)# => "e"
+"hello".byteslice(-1)# => "o"
+"\u3042".byteslice(0)# => "\xE3"
+"\u3042".byteslice(1)# => "\x81"
+
+
+byteslice(nth, len=1) -> String | nil
+#nthバイト目から長さlenバイトの部分文字列を新しく作って返す。nthが負の場合は文字列の末尾から数える。引数が範囲外を指定した場合はnilを返す。
+#[PARAM]nth: 取得したい文字列の開始バイトを整数で指定する。
+#[PARAM]len: 取得したい文字列の長さを正の整数で指定する。
+#[RETURN]: 切り出した文字列を返す。戻り値の文字エンコーディングは自身と同じ。
+"hello".byteslice(1, 2)# => "el"
+"\u3042\u3044\u3046".byteslice(0, 3)# => "\u3042"
+
+
+byteslice(range) -> String | nil
+#rangeで指定したバイトの範囲に含まれる部分文字列を返す。引数が範囲外を指定した場合はnilを返す。
+#[PARAM]range: 取得したい文字列の範囲を示すRangeオブジェクト
+#[RETURN]: 切り出した文字列を返す。戻り値の文字エンコーディングは自身と同じ。
+"hello".byteslice(1..2)# => "el"
+"\x03\u3042\xff".byteslice(1..3)# => "\u3042"
+
+
+bytesplice(index, length, str) -> String
+bytesplice(index, length, str, str_index, str_length) -> String
+bytesplice(range, str) -> String
+bytesplice(range, str, str_range) -> String
+#selfの一部または全部をstrで置き換えてselfを返す。
+#str_indexをstr_lengthもしくはstr_rangeが与えられたとき、selfの一部または全部をstr.byteslice(str_index, str_length)もしくはstr.byteslice(str_range)で置き換える。strの部分文字列は新しい文字列オブジェクトとして生成されない。置き換え範囲の指定は、長さの指定が省略できないこと以外はString#bytesliceと同じ。置き換え後の文字列の長さが対象の長さと違う場合、適切に長さが調整される。
+#[PARAM]index: 置換したい文字列の範囲の始端
+#[PARAM]length: 置換したい文字列の範囲の長さ
+#[PARAM]str_index: strの範囲の始端
+#[PARAM]str_length: strの範囲の長さ
+#[PARAM]range: 置換したい文字列の範囲を示すRangeオブジェクト
+#[PARAM]str_range: strの範囲を示すRangeオブジェクト
+#[EXCEPTION]IndexError: indexやlengthが範囲外の場合に発生
+#[EXCEptION]RangeError: rangeが範囲外の場合に発生
+#[EXCEPTION]IndexError: 指定した始端や終端が文字列の境界と一致しない場合に発生
+
+
+capitalze(*options) -> String
+#文字列先頭の文字を大文字に、残りを小文字に変更した文字列を返す。
+#[PARAM]options: String#downcaseを参照
+p "foobar--".capitalize# => "Foobar--"
+p "fooBAR--".capitalize# => "Foobar--"
+p "FOOBAR--".capitalize# => "Foobar--"
+
+
+capitalize!(*options) -> self | nil
+#文字列先頭の文字を大文字に、残りを小文字に破壊的に変更する。
+#[PARAM]options:詳細はString#downcase
+#[RETURN]: capitalize!はselfを変更いて返すが、変更が起こらなかった場合はnilを返す。
+str = "foobar"
+str.capitalize!
+p str# => "Foobar"
+
+str = "fooBAR"
+str.capitalize!
+p str# => "Foobar"
+
+
+casecmp(other) -> -1 | 0 | 1 | nil
+#String#<=>と同様に文字列の順序を比較しますが、アルファベットの大文字小文字の違いを無視する。このメソッドの動作は組み込み変数$=に影響されない。String#casecmp?と違って大文字小文字の違いを無視するのはUnicode全体ではなく、A-Z/a-zだけ。
+#[PARAM]other: selfと比較する文字列
+"aBcDeF".casecmp("abcde")# => 1
+"aBcDeF".casecmp("abcdef")# => 0
+"aBcDeF".casecmp("abcdefg")# => -1
+"abcdef".casecmp("ABCDEF")# => 0
+"\u{e4 f6 fc}".encode("ISO-8859-1").casecmp("\u{c4 d6 dc}")# => nil
+
+
+casecmp?(other) -> bool | nil
+#大文字小文字の違いを無視し文字列を比較する。文字列が一致する場合にはtrueを返し、一致しない場合にはfalseを返す。
+#[PARAM]other: selfと比較する文字列
+"abcdef".casecmp?("abcde")# => false
+"aBcDeF".casecmp?("abcdef")# => true
+"abcdef".casecmp?("abcdefg")# => false
+"abcdef".casecmp?("abcdefg")# => true
+"\u{e4 f6 fc}".casecmp?("\u{c4 d6 dc}")#=> true
+"\u{e4 f6 fc}".encode("ISO-8859-1").casecmp?("\u{c4 d6 dc}")#=> nil
+
+
+center(width, padding='') -> String
+#長さwidth の文字列にselfを中央寄せした文字列を返す。selfの長さがwidthより長いときにはもとの文字列の複製を返す。また、第２引数paddingを指定したときは空白文字の代わりにpaddingを詰める。
+#[PARAM]width: 返り値の文字列の最小の長さ
+#[PARAM]padding: 長さがwidthになるまでselfの両側に詰める文字
+p "foo".center(10)# => "   foo    "
+p "foo".center(9)# => "   foo   "
+p "foo".center(8)# => "  foo   "
+p "foo".center(7)# => "  foo  "
+p "foo".center(3)# => "foo"
+p "foo".center(2)# => "foo"
+p "foo".center(1)# => "foo"
+p "foo".center(10, "*")# => "***foo****"
+
+
+chars -> [String]
+chars{|cstr| block} -> self
+#文字列の各文字を文字列の配列で返す。
+"hello世界".chars# => ["h", "e", "l", "o", "世", "界"]
+
+
+chomp(rs = $/) -> String
+#selfの末尾からrsで指定する改行コードを取り除いた文字列を生成して返す。ただし、rsが"\n"のときは実行環境によらず"\r", "\r\n", "\n"のすべてを改行コードとみなして取り除く。rsにnilをしてした場合、このメソッドは何もしない。rsにから文字列("")を指定した場合は「パラグラフモード」になり、実行環境によらず末尾の連続する改行コード("\r\n", "\n")をすべて取り除く。
+p "foo\n".chomp# => "foo"
+p "foo\n".chomp("\n")# => "foo"
+p "foo\n".chomp("\r\n")# => "foo"
+
+$/ = "\n"
+p "foo\r".chomp# => "foo"
+p "foo\r\n".chomp# => "foo"
+p "foo\n".chomp# => "foo"
+p "foo\n\r".chomp# => "foo\n"
+
+p "string\n".chomp(nil)# => "string\n"
+
+p "foo\r\n\n".chomp("")# => "foo"
+p "foo\n\r\n".chomp("")# => "foo"
+p "foo\n\r\r".chomp("")# => "foo\n\r\r"
+
+
+chomp!(rs = $/) -> self | nil
+#selfの末尾からrsで指定する改行コードを取り除く。ただし、rsが"\n"のときは、実行環境によらず"\r", "\r\n", "\n"のすべてを改行コードとみなして取り除く。rsにnilを指定した場合、このメソッドは何もしない。rsに空文字列("")を指定した場合は「パラグラフモード」になり、実行環境によらず末尾の連続する改行コード('\r\b', '\n')をすべて取り除く。
+#[RETURN]: chomp!は通常selfを返すが、取り除く改行がなかった場合はnilを返す。
+buf = "string\n"
+buf.chomp!# => nil
+p buf# => "string"
+
+$/ = "\n"
+p "foo\r".chomp!# => "foo"
+p "foo\r\n".chomp!# => "foo"
+p "foo\n".chomp!# => "foo"
+p "foo\n\r".chomp!# => "foo\n"
+
+buf = "string\n"
+buf.chomp!(nil)# => nil
+p buf# => "string\n"
+
+p "foo\r\n\n".chomp!("")# => "foo"
+p "foo\n\r\n".chomp!("")# => "foo"
+p "foo\n\r\r".chomp!("")# => nil
+
+
+chop -> String
+#文字列の最後の文字を取り除いた新しい文字列を生成して返す。ただし、文字列の終端が"\r\n"であえばその２文字を取り除く。
+p "string\n".chop# => "string"
+p "string\r\n".chop# => "string"
+p "string".chop# => "strin"
+p "strin".chop# => "stri"
+p "".chop# => ""
+
+
+chop! -> self | nil
+#文字列の最後の文字を取り除く。ただし、終端が"\r\n"であればその２文字を取り除く。
